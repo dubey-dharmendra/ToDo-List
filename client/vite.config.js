@@ -8,6 +8,7 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react(), tailwindcss(),],
     server: {
+      hmr: true,
       port: parseInt(env.PORT) || 3002,
     }
   }

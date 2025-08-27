@@ -1,62 +1,123 @@
 import { Button, Container, Stack, TextField } from '@mui/material'
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
+import axios from "../services/axios"
 
+import { useAuth } from '../context/AuthContext'
+import { toast } from 'react-toastify'
+import TaskCard from './TaskCard'
+import EditTask from './EditTask'
+import { useNavigate } from 'react-router-dom'
 
-const taskData = [
-    {
-        title: "Fresh",
-        timeStart: "05:30 AM",
-        timeEnd: "06:00 AM",
-        Date: "02-08-2025"
-    },
-    {
-        title: "Fresh",
-        discription: "bath,toothpaste,toilate",
-        timeStart: "05:30 AM",
-        timeEnd: "06:00 AM",
-        Date: "02-08-2025"
-    },
-    {
-        title: "Fresh",
-        discription: "bath,toothpaste,toilate",
-        timeStart: "05:30 AM",
-        timeEnd: "06:00 AM",
-        Date: "02-08-2025"
-    },
-
-]
 
 const Main = () => {
 
-    const [taskDetails, setTaskDetails] = useState(taskData)
+    const { user } = useAuth()
+    const userId = user?.user?._id
+    const token = user.token
+
+    const navigate = useNavigate()
+
+    const [taskDetails, setTaskDetails] = useState([])
+    const [editTask, setEditTask] = useState(null)
 
 
-    const formHandle = (formData) => {
 
+    const fetchTask = async () => {
+
+        try {
+            const getTasks = await axios.get(`/get-task/${userId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+
+            setTaskDetails(getTasks?.data?.tasks || [])
+        } catch (error) {
+            toast.error(error.response.data.error)
+            navigate("/")
+        }
+
+    }
+
+    const updateTask = async (task) => {
+        try {
+            const updatedData = await axios.patch(`update/${task._id}`,
+                { title: task.title, startTime: task.startTime, endTime: task.endTime },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                })
+            taskDetails[task.index] = updatedData?.data?.updatedTask
+            setEditTask(null)
+        } catch (err) {
+            toast.error(err)
+        }
+
+    }
+
+
+    const deleteTask = async (task) => {
+
+        try {
+            await axios.delete(`delete/${task._id}`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                })
+            toast.success("Task deleted successfully")
+            await fetchTask()
+
+        } catch (err) {
+            toast.error(err)
+        }
+
+    }
+
+
+    useEffect(() => {
+
+        if (userId && token) {
+            fetchTask();
+        } else {
+            toast.error("Token Expired")
+            navigate("/")
+        }
+
+    }, [userId, token])
+
+    const handleEdit = (index) => {
+        setEditTask({ ...taskDetails[index], index })
+    }
+
+    const formHandle = async (formData) => {
         const data = Object.fromEntries(formData.entries())
 
-        setTaskDetails([{
-            endTime: data.endTime,
-            startTime: data.startTime,
-            task: data.task,
-            Date: "02-08-2025",
-        }, ...taskData])
+        try {
+            const apiResult = await axios.post("/createTask", data, {
+                headers: { Authorization: `Bearer ${user.token}` }
+            })
+            toast.success("task created successfully")
 
+            setTaskDetails(prev => [...prev, apiResult?.data?.task])
+
+        } catch (error) {
+
+            toast.error(error)
+        }
 
 
     }
 
     return (
-        <Container maxWidth='md' sx={{ bgcolor: "#1E1F1E", marginTop: "2px" }}>
+        <Container maxWidth='md' sx={{ bgcolor: "#1E1F1E", marginTop: "2px" }} >
 
-            <div className='  py-4'>
+            <div className='py-4 overflow-y'>
 
                 <form action={formHandle} className='flex gap-4 justify-center'>
-                    <input type="text" placeholder='enter task...' name='task' className='w-[60%] border-2 border-white text-white rounded-md px-2' />
-
+                    <input type="text" placeholder='enter task...' name='title' className='w-[60%] border-2 border-white text-white rounded-md px-2' />
 
                     <input
-                        className='text-white  border-2 border-white'
+                        className='text-white  border-2 border-white px-2'
                         label="Start Time"
                         type="time"
                         name="startTime"
@@ -64,7 +125,7 @@ const Main = () => {
                     // onChange={(e) => setStartTime(e.target.value)}
                     />
                     <input
-                        className='text-white  border-2 border-white'
+                        className='text-white  border-2 border-white px-2'
                         label="End Time"
                         type="time"
                         name="endTime"
@@ -79,20 +140,23 @@ const Main = () => {
 
             </div>
 
-            <div className='text-white py-4 flex flex-col gap-4 justify-center items-center'>
+            <div>
+                <div className='text-white py-4 flex flex-col gap-4 justify-center items-center'>
 
-                {console.log(taskDetails)}
-                {taskDetails.map((task, index) => {
-                    return (
-                        <div className='w-[500px] text-center bg-gray-600 p-4 rounded-xl grid grid-cols-2 grid-rows-2' key={index} >
-                            <span className='py-4'>startTime: {task.timeStart}</span>
-                            <span className='py-4'>endTime: {task.timeEnd}</span>
-                            <p className='py-4 col-span-2'>title:{task.title}</p>
-                        </div>
+                    {taskDetails?.map((task, index) => {
+                        return (
+                            <TaskCard task={task} key={index} onEdit={() => handleEdit(index)} onDelete={() => deleteTask(task)} />
+                        )
+                    })}
+                </div>
 
+                {editTask &&
+                    <EditTask
+                        task={editTask}
+                        onUpdate={updateTask}
+                        onClose={() => setEditTask(null)}
+                    />}
 
-                    )
-                })}
             </div>
 
         </Container >

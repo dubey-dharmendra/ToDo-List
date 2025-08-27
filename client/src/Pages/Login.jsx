@@ -1,13 +1,22 @@
 import Button from '@mui/material/Button';
 import React, { useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify';
 import AuthServices from '../services/authServices';
+import { FaEyeSlash } from "react-icons/fa";
+import { useAuth } from '../context/AuthContext';
+
+
 
 
 const Login = () => {
 
+    const navigate = useNavigate()
+
+    const { login } = useAuth()
+
     const [isLogin, setIsLogin] = useState(true)
+    const [passwordType, setPasswordType] = useState("password")
 
 
     const handleForm = async (e) => {
@@ -22,11 +31,14 @@ const Login = () => {
         try {
             if (isLogin) {
                 res = await AuthServices.login(data)
+                login(res.data)
                 toast.success('Login Sucessfully')
+                navigate("/home")
+
             } else {
 
                 res = await AuthServices.signup(data)
-                toast.success('Signup Sucessfully')
+                toast.success('Signup Sucessfully, Please login now')
             }
             form.reset();
         } catch (err) {
@@ -55,10 +67,16 @@ const Login = () => {
                                 className='mt-1 w-full border-2 py-1 px-2 rounded-md' />
                         </div>
 
-                        <div>
+                        <div className='relative'>
                             Password
-                            <input type="password" placeholder='password' name='password'
+                            <input type={passwordType} placeholder='password' name='password'
                                 className='mt-1 w-full border-2 px-2 py-1 rounded-md' />
+
+                            <FaEyeSlash className='absolute right-4 top-10 cursor-pointer' onClick={() => setPasswordType(
+                                passwordType == "text" ? "password" : "text"
+                            )
+                            } />
+
                         </div>
 
                         <Button sx={{ mt: 5, mb: 2, width: '100%' }} variant="contained" type='submit'>Login</Button>
@@ -82,10 +100,12 @@ const Login = () => {
                                 className='my-1 w-full border-2 py-1 px-2 rounded-md' />
                         </div>
 
-                        <div className='my-4'>
+                        <div className='my-4 relative'>
                             Password
-                            <input type="password" placeholder='password' name='password'
+                            <input type={passwordType} placeholder='password' name='password'
                                 className='my-1 w-full border-2 px-2 py-1 rounded-md' />
+                            <FaEyeSlash className='absolute right-4 top-10 cursor-pointer' onClick={() => setPasswordType(passwordType == "text" ? "password" : "text")
+                            } />
                         </div>
 
 
